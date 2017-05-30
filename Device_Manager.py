@@ -4,134 +4,49 @@ Spyder Editor
 
 This is a temporary script file.
 """
-import visa
 
-SIG_GEN = '10.18.134.209'
+import time
+import numpy as np
+import matplotlib.pyplot as plt
+from src.signal import Signal
+from src.spectrum import Spectrum
 
+SA = '10.18.134.187'
+SG = '10.18.134.209'
 
-class Visa(object):
-    def __init__(self, ip):
-        self.ip = ip
-        self.rm = visa.ResourceManager()
-        self.device = None
+dev1 = Signal(SG)
+dev2 = Spectrum(SA)
+dev1.visa_open()
+dev2.visa_open()
+print(dev1.info())
+print(dev2.info())
+dev1.preset()
+dev2.preset()
 
-    def visa_open(self):
-        print(self.ip)
-        print(type(self.rm))
+dev1.set_amp(-10)
+dev1.set_rf_on_off('ON')
+dev2.set_span(50e6)
+dev2.set_mark_on_off('ON')
 
-        self.device = self.rm.open_resource('TCPIP::{}'.format(SIG_GEN))
+start = 10e9
+stop = 20e9
+npts = 21
+freq = np.linspace(start, stop, npts)
+mark = []
+for i in freq:
+    time.sleep(0.2)
+    dev1.set_freq(i)
+    time.sleep(0.1)
+    dev2.set_freq(i)
+    time.sleep(0.2)
+    dev2.set_mark_freq(i)
+    time.sleep(0.2)
+    #    print dev2.get_mark_freq()
+    mark.append(dev2.get_mark_freq())
 
-    def visa_write(self, command):
-        return self.device.write(command)
-
-    def visa_read(self, command):
-        return self.device.read(command)
-
-    def visa_query(self, command):
-        return self.device.query(command)
-
-    def visa_close(self):
-        return self.device.close()
-
-
-class Device(Visa):
-    def __init__(self, ip):
-        super(Device, self).__init__(ip)
-
-    def info(self):
-        full_name = self.visa_query('*IDN?')
-        return full_name  # .split(",")[0]
-        #       return SN     = self.full_name.split(',')[1]
-        #       return PN     = self.full_name.split(',')[2]
-
-    def preset(self):
-        return self.visa_write('SYST:PRES')
-
-
-class FreqDev(Device):
-    def __init__(self, ip):
-        super(FreqDev, self).__init__(ip)
-
-    def set_freq(self, freq):
-        return self.visa_write('FREQ:CENT {}'.format(freq))
-
-    def get_freq(self):
-        return self.visa_query('FREQ:CENT?')
-
-    def set_span(self, span):
-        return self.visa_write('FREQ:SPAN {}'.format(span))
-
-    def get_span(self):
-        return self.visa_query('FREQ:SPAN?')
-
-
-class PowDev(Device):
-    def __init__(self, ip):
-        super(PowDev, self).__init__(ip)
-
-    def set_voltage(self, voltage):
-        pass
-
-    def set_current(self, current):
-        pass
-
-    def get_voltage(self):
-        pass
-
-    def get_current(self):
-        pass
-
-
-class PowerSupply(PowDev):
-    def __init__(self, ip):
-        super(PowerSupply, self).__init__(ip)
-
-
-class Spectrum(FreqDev):
-    def __init__(self, ip):
-        super(Spectrum, self).__init__(ip)
-
-    def peak_search(self):
-        pass
-
-    def set_band_pow_span(self):
-        pass
-
-
-class Network(FreqDev):
-    def __init__(self, ip):
-        super(Network, self).__init__(ip)
-
-    def set_sparam(self, sparm):
-        pass
-
-    def set_meas_format(self, meas_format):
-        pass
-
-
-class Signal(FreqDev):
-    def __init__(self, ip):
-        super(Signal, self).__init__(ip)
-
-    def set_amp(self, amp):
-        return self.visa_write(':POW {}'.format(amp))
-
-    def get_amp(self):
-        return self.visa_query(':POW?')
-
-    def set_ext_ref(self, freq):
-        pass
-
-    def set_rf_on_off(self, rf):
-        pass
-
-    def set_mod_on_off(self, rf):
-        pass
-
-
-sg = Signal(SIG_GEN)
-sg.visa_open()
-print(sg.info())
-
-
-
+dev1.visa_close()
+dev2.visa_close()
+plt.plot(freq, mark)
+plt.grid()
+plt.show()
+# print (sg.get_amp())
